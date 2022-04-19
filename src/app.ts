@@ -1,5 +1,5 @@
 import { Telegraf, Markup } from 'telegraf';
-require('dotenv').config();
+// require('dotenv').config();
 
 const token = process.env.BOT_TOKEN;
 if (token === undefined) {
