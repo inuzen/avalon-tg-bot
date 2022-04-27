@@ -1,16 +1,27 @@
 import { Bot, session, InlineKeyboard } from 'grammy';
+import { run } from '@grammyjs/runner';
+import { apiThrottler } from '@grammyjs/transformer-throttler';
+
 import { createMessageByRole, generateRoles, QUESTS } from './engine/engine';
-import { globalVoteMenu, nominateMenu, questMenu, roleMenu, assassinMenu } from './menus';
+
+// menus
+import { globalVoteMenu } from './menus/globalVoteMenu';
+import { nominateMenu } from './menus/nominateMenu';
+import { questMenu } from './menus/questMenu';
+import { roleMenu } from './menus/rolesMenu';
+import { assassinMenu } from './menus/assassinMenu';
+
 // utils
-import { getGlobalVoteText, getPlayerRef } from './utils';
+import { getGlobalVoteText, getPlayerRef, messageBuilder } from './utils';
 import cloneDeep from 'clone-deep';
+
 //types
-import { Game, ROLE_LIST, SIDES, MyContext, SessionData, DEFAULT_ROLES } from './types';
+import { Game, ROLE_LIST, SIDES, MyContext, SessionData } from './types';
 
 require('dotenv').config();
 
 // TODO Everywhere where session is set - use next()
-// TODO Allow only the host to change settings and stop games
+// TODO Allow only the host to change settings, continue rounds and stop games
 
 const token = process.env.BOT_TOKEN;
 if (token === undefined) {
@@ -18,6 +29,9 @@ if (token === undefined) {
 }
 
 const bot = new Bot<MyContext>(token);
+
+const throttler = apiThrottler();
+bot.api.config.use(throttler);
 
 const initialGameState: Game = {
     hostId: 0,
@@ -61,7 +75,7 @@ const inlineKeyboard = new InlineKeyboard().text('Join', 'join-game').row().text
 
 bot.command('new', async (ctx, next) => {
     ctx.session.game = cloneDeep(initialGameState);
-    ctx.reply(
+    await ctx.reply(
         `Press Join if you want to play. \nWhen everyone is ready press Start.\nUse /roles to add extra roles to the game`,
         {
             reply_markup: inlineKeyboard,
@@ -72,6 +86,10 @@ bot.command('new', async (ctx, next) => {
 });
 
 bot.callbackQuery('join-game', async (ctx, next) => {
+    if (ctx.session.game.allPlayers.length === 10) {
+        await ctx.reply('Player limit exceeded (max 10)');
+        return;
+    }
     if (ctx.from?.id && !ctx.session.game.allPlayers.some((pl) => pl.telegramId === ctx.from.id)) {
         ctx.session.game.allPlayers.push({
             telegramId: ctx.from.id,
@@ -93,6 +111,12 @@ bot.callbackQuery('join-game', async (ctx, next) => {
 
 bot.callbackQuery('start-game', async (ctx, next) => {
     // TODO check that game can be started
+    const currentPlayers = ctx.session.game.allPlayers.length;
+    if (currentPlayers < 5) {
+        await ctx.reply('Need more players to start');
+        return;
+    }
+
     ctx.session.game.currentRound = 1;
     ctx.session.game.partySize = QUESTS[ctx.session.game.allPlayers.length][ctx.session.game.currentRound - 1];
 
@@ -102,57 +126,60 @@ bot.callbackQuery('start-game', async (ctx, next) => {
     ctx.session.game.currentLeader = leader || null;
 
     assignedRoles.allPlayers.forEach(async (player) => {
-        await bot.api.sendMessage(player.telegramId, `You play on the side of ${player.role.side}`);
-        await bot.api.sendMessage(player.telegramId, `Your role is ${player.role.roleName}`);
+        // TODO Maybe and emojis for each role and side
+        const messages = [
+            `Your role is <b>${player.role.roleName}<b>`,
+            `You play on the side of <b>${player.role.side}<b>`,
+        ];
 
         if (player.role.side === SIDES.EVIL) {
             if (player.role.key !== ROLE_LIST.OBERON) {
-                await bot.api.sendMessage(
-                    player.telegramId,
-                    `Other Evil players are: ${assignedRoles.evil
-                        .reduce((acc: string[], evilPlayer) => {
-                            if (
-                                evilPlayer.role.key !== ROLE_LIST.OBERON &&
-                                player.telegramId !== evilPlayer.telegramId
-                            ) {
-                                acc.push(`${player.name}(@${player.username})`);
-                            }
-                            return acc;
-                        }, [])
-                        .join(', ')}`,
-                );
+                const otherEvilPlayers = assignedRoles.evil
+                    .reduce((acc: string[], evilPlayer) => {
+                        if (evilPlayer.role.key !== ROLE_LIST.OBERON && player.telegramId !== evilPlayer.telegramId) {
+                            acc.push(getPlayerRef(evilPlayer));
+                        }
+                        return acc;
+                    }, [])
+                    .join(', ');
+
+                messages.push(`Other Evil players are: ${otherEvilPlayers}`);
             }
         }
 
         const initialMessage = createMessageByRole(player.role.key, assignedRoles);
-        initialMessage && (await bot.api.sendMessage(player.telegramId, initialMessage));
+        messages.push(initialMessage);
+        await bot.api.sendMessage(player.telegramId, messageBuilder(messages), { parse_mode: 'HTML' });
     });
     // TODO automatically open nominations
     await ctx.editMessageText('The game has started!');
-    await ctx.reply(`The leader is ${getPlayerRef(leader!)}. Use /nominate to open menu`);
+    await ctx.reply(`The leader is 👑${getPlayerRef(leader!)}👑\nUse /nominate to open menu`);
 
     await next();
 });
 
-bot.command('continue', async (ctx, next) => {
-    // TODO check for how the quest vote finished to account for failed quest
-    let { allPlayers, currentLeader } = ctx.session.game;
-    ctx.session.game.currentRound += 1;
-    ctx.session.game.nominatedPlayers = [];
-    ctx.session.game.partySize = QUESTS[allPlayers.length][ctx.session.game.currentRound - 1];
-    const currLeaderId = currentLeader?.id || 0;
-    const newLeaderId = currLeaderId === allPlayers.length ? 1 : currLeaderId + 1;
-    const newLeader = allPlayers.find((pl) => pl.id === newLeaderId);
-    ctx.session.game.currentLeader = newLeader!;
-    await ctx.reply(
-        `New round has started! New leader is ${getPlayerRef(newLeader)}\nRound number: ${
-            ctx.session.game.currentRound
-        }\nRequired party size is ${ctx.session.game.partySize}\nCurrent score is Good ${
-            ctx.session.game.goodScore
-        } - ${ctx.session.game.evilScore} Evil \nUse /nominate to choose them`,
-    );
-    await next();
-});
+bot.filter((ctx) => ctx.from?.id === ctx.session.game.currentLeader?.telegramId).command(
+    'continue',
+    async (ctx, next) => {
+        // TODO check for how the quest vote finished to account for failed quest
+        const { allPlayers, currentLeader } = ctx.session.game;
+        ctx.session.game.currentRound += 1;
+        ctx.session.game.nominatedPlayers = [];
+        ctx.session.game.partySize = QUESTS[allPlayers.length][ctx.session.game.currentRound - 1];
+        const currLeaderId = currentLeader?.id || 0;
+        const newLeaderId = currLeaderId === allPlayers.length ? 1 : currLeaderId + 1;
+        const newLeader = allPlayers.find((pl) => pl.id === newLeaderId);
+        ctx.session.game.currentLeader = newLeader!;
+        await ctx.reply(
+            `New round has started! New leader is ${getPlayerRef(newLeader)}\nRound number: ${
+                ctx.session.game.currentRound
+            }\nRequired party size is ${ctx.session.game.partySize}\nCurrent score is Good ${
+                ctx.session.game.goodScore
+            } - ${ctx.session.game.evilScore} Evil \nUse /nominate to choose them`,
+        );
+        await next();
+    },
+);
 
 bot.filter((ctx) => ctx.from?.id === ctx.session.game.currentLeader?.telegramId).command(
     'nominate',
@@ -169,12 +196,18 @@ bot.filter((ctx) => ctx.from?.id === ctx.session.game.currentLeader?.telegramId)
 // TODO add /desc command to get description of the role in private chat
 
 bot.command('roles', async (ctx, next) => {
-    ctx.reply(
+    await ctx.reply(
         'Select extra roles to be used in a game.\nIt persists between session but will be emptied if bot was offline',
         { reply_markup: roleMenu },
     );
     await next();
 });
 
+bot.command('rules', async (ctx, next) => {
+    await ctx.reply('Rules can be found here https://www.ultraboardgames.com/avalon/game-rules.php');
+
+    await next();
+});
+
 bot.catch((err) => console.error(err));
-bot.start();
+run(bot);

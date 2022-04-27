@@ -38,3 +38,5 @@ export const getGlobalVoteText = (need: number, have: number): string => {
 };
 
 export const checkIfDefaultRole = (role: ROLE_LIST) => DEFAULT_ROLES.includes(role);
+
+export const messageBuilder = (lines: string[]) => lines.join('\n');

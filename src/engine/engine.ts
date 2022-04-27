@@ -1,6 +1,7 @@
 import { getPlayerRef } from './../utils';
 import { ROLES, Player, Role, SIDES, ROLE_LIST } from '../types';
 
+// TODO maybe join role and quest constants
 // in a format of "player_count": [good, evil]
 const ROLE_DISTRIBUTION: Record<number, number[]> = {
     2: [1, 1], // TODO delete after test
@@ -12,9 +13,15 @@ const ROLE_DISTRIBUTION: Record<number, number[]> = {
     10: [6, 4],
 };
 
+// playerCount: [1st quest party size, 2nd quest party size, ...]
 export const QUESTS: Record<number, number[]> = {
     2: [1, 1, 1, 1, 1],
     5: [2, 3, 2, 3, 3],
+    6: [2, 3, 4, 3, 4],
+    7: [2, 3, 3, 4, 4],
+    8: [3, 4, 4, 5, 5],
+    9: [3, 4, 4, 5, 5],
+    10: [3, 4, 4, 5, 5],
 };
 
 const shuffle = <T>(a: T[], b?: any, c?: any, d?: any): T[] => {
@@ -71,15 +78,15 @@ export const createMessageByRole = (role: ROLE_LIST, assignedRoles: GeneratedRol
         case ROLE_LIST.MERLIN:
             return `Evil players are: ${assignedRoles.evil
                 .reduce((acc: string[], evilPlayer) => {
-                    if (evilPlayer.role?.key !== ROLE_LIST.MORDRED && evilPlayer.role?.key !== ROLE_LIST.OBERON) {
-                        acc.push(`${evilPlayer.name}(@${evilPlayer.username})`);
+                    if (evilPlayer.role?.key !== ROLE_LIST.MORDRED) {
+                        acc.push(getPlayerRef(evilPlayer));
                     }
                     return acc;
                 }, [])
                 .join(', ')}`;
         case ROLE_LIST.PERCIVAL:
             const merlin = assignedRoles.good.find((pl) => pl.role.key === ROLE_LIST.MERLIN)!;
-            const morgana = assignedRoles.evil.find((player) => player.role.key === ROLE_LIST.MORGANA)!;
+            const morgana = assignedRoles.evil.find((pl) => pl.role.key === ROLE_LIST.MORGANA)!;
             const concealed = shuffle([merlin, morgana]);
 
             return morgana
