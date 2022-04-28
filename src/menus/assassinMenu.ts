@@ -1,6 +1,7 @@
+import { messageBuilder, getEndGameMessage } from './../utils/textUtils';
 import { MyContext, ROLE_LIST, SIDES } from '../types';
-import { Menu, MenuRange } from '@grammyjs/menu';
-import { getPlayerRef } from '../utils';
+import { Menu } from '@grammyjs/menu';
+import { getPlayerRef } from '../utils/utils';
 
 export const assassinMenu = new Menu<MyContext>('assassin-menu');
 
@@ -29,9 +30,11 @@ assassinMenu
         const { possibleMerlin, allPlayers } = ctx.session.game;
         const merlin = allPlayers.find((pl) => pl.role?.key === ROLE_LIST.MERLIN);
         if (possibleMerlin?.id === merlin?.id) {
-            await ctx.reply('The Merlin was guessed correctly! The Evil side wins!');
+            await ctx.reply(messageBuilder('🗡️ Merlin was slain! 🗡️\n', getEndGameMessage(allPlayers, SIDES.EVIL)));
         } else {
-            await ctx.reply('The Merlin outsmarted his enemies! The Good side wins!');
+            await ctx.reply(
+                messageBuilder('🪄 Merlin outsmarted his enemies! 🪄\n', getEndGameMessage(allPlayers, SIDES.GOOD)),
+            );
         }
         await ctx.menu.close();
     });

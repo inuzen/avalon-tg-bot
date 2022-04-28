@@ -1,13 +1,21 @@
-import { Player, MyContext } from '../types';
+import { getEndGameMessage, messageBuilder } from './../utils/textUtils';
+import { Player, MyContext, SIDES } from '../types';
 import { Menu } from '@grammyjs/menu';
-import { getPlayerRef, checkForEveryoneAndRenderResults } from '../utils';
+import { getPlayerRef, checkForEveryoneAndRenderResults } from '../utils/utils';
+import { getPartyVoteText } from '../utils/textUtils';
 import { questMenu } from './questMenu';
-import { syncBuiltinESMExports } from 'module';
+import { QUESTS } from '../engine/engine';
 
 export const globalVoteMenu = new Menu<MyContext>('global-vote')
-    .text('Yes, i trust them completely', (ctx) => countGlobalVote(ctx, true))
+    .text('Yes, i trust them completely 👍', async (ctx, next) => {
+        await countGlobalVote(ctx, true);
+        await next();
+    })
     .row()
-    .text("No, i don't think this is a good idea", (ctx) => countGlobalVote(ctx, false));
+    .text("No, i don't think this is a good idea 👎", async (ctx, next) => {
+        await countGlobalVote(ctx, false);
+        await next();
+    });
 
 const countGlobalVote = async (ctx: MyContext, vote: boolean) => {
     const { allPlayers, nominatedPlayers } = ctx.session.game;
@@ -19,9 +27,7 @@ const countGlobalVote = async (ctx: MyContext, vote: boolean) => {
         player: allPlayers.find((pl) => pl.telegramId === ctx.from?.id) as Player,
     });
     await ctx.editMessageText(
-        `Now everyone should vote. Selected players are ${nominatedPlayers.map(getPlayerRef).join(', ')}. \n${
-            ctx.session.game.votingArray.length
-        } out of ${allPlayers.length} voted`,
+        getPartyVoteText(nominatedPlayers, ctx.session.game.votingArray.length, allPlayers.length),
     );
     const voteResultList = checkForEveryoneAndRenderResults(allPlayers, ctx.session.game.votingArray);
 
@@ -39,8 +45,11 @@ const countGlobalVote = async (ctx: MyContext, vote: boolean) => {
 
         if (votePassed) {
             ctx.session.game.missedVotes = 0;
+            ctx.session.game.currentQuest += 1;
+            ctx.session.game.nominatedPlayers = [];
+            ctx.session.game.partySize = QUESTS[allPlayers.length][ctx.session.game.currentQuest - 1];
             await ctx.reply(
-                `Vote successful! \nNow The outcome of the quest depends on ${nominatedPlayers
+                `✅ Vote successful! ✅\nNow The outcome of the quest depends on ${nominatedPlayers
                     .map(getPlayerRef)
                     .join(', ')}.`,
                 {
@@ -49,13 +58,21 @@ const countGlobalVote = async (ctx: MyContext, vote: boolean) => {
             );
         } else {
             ctx.session.game.missedVotes += 1;
+
             await ctx.reply(
-                `Vote Failed!\nIf you fail to go on a quest 5 times in a row then EVIL wins!\nMissed votes in a row: ${ctx.session.game.missedVotes}`,
+                messageBuilder(
+                    '‼️ Vote Failed ‼️',
+                    'If you fail to go on a quest 5 times in a row then EVIL wins!',
+                    `Missed votes in a row: ${ctx.session.game.missedVotes}`,
+                ),
             );
+            // TODO continue the same round
             if (ctx.session.game.missedVotes === 5) {
-                await ctx.reply(
-                    "The game is over and Evil has won! You couldn't decide who you trust 5 times in a row",
-                );
+                await ctx.reply(getEndGameMessage(allPlayers, SIDES.EVIL), {
+                    parse_mode: 'MarkdownV2',
+                });
+            } else {
+                await ctx.reply(`Discus what happened and then the leader can /continue when ready`);
             }
         }
     }

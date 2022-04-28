@@ -8,12 +8,12 @@ export interface SessionData {
 export type MyContext = Context & SessionFlavor<SessionData>;
 
 export interface Game {
-    hostId: number;
+    hostId?: number;
     allPlayers: Player[];
     partySize: number;
     evilScore: number;
     goodScore: number;
-    currentRound: number;
+    currentQuest: number;
     currentLeader: Player | null;
     nominatedPlayers: Player[];
     extraRoles: ROLE_LIST[];

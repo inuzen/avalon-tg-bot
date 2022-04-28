@@ -1,6 +1,6 @@
 import { MyContext, ROLE_LIST, DEFAULT_ROLES } from '../types';
 import { Menu, MenuRange } from '@grammyjs/menu';
-import { checkIfDefaultRole } from '../utils';
+import { checkIfDefaultRole } from '../utils/utils';
 
 export const roleMenu = new Menu<MyContext>('roles-menu')
     .dynamic(() => {

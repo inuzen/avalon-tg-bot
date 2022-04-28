@@ -1,4 +1,4 @@
-import { getPlayerRef } from './../utils';
+import { getPlayerRef } from '../utils/utils';
 import { ROLES, Player, Role, SIDES, ROLE_LIST } from '../types';
 
 // TODO maybe join role and quest constants

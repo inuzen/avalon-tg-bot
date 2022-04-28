@@ -1,12 +1,12 @@
 import { MyContext } from '../types';
 import { Menu } from '@grammyjs/menu';
-import { getPlayerRef, getGlobalVoteText } from '../utils';
+import { getPlayerRef } from '../utils/utils';
+import { getGlobalVoteText } from '../utils/textUtils';
 import { globalVoteMenu } from './globalVoteMenu';
 
 export const nominateMenu = new Menu<MyContext>('nominate-menu');
 
 nominateMenu.dynamic((ctx, range) => {
-    // TODO check that only current leader can nominate people. Also limit the amount of people who can be nominated
     for (const player of ctx.session.game.allPlayers) {
         range
             .text(

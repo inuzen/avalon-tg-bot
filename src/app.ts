@@ -12,7 +12,8 @@ import { roleMenu } from './menus/rolesMenu';
 import { assassinMenu } from './menus/assassinMenu';
 
 // utils
-import { getGlobalVoteText, getPlayerRef, messageBuilder } from './utils';
+import { getPlayerRef, mapUserToPlayer } from './utils/utils';
+import { getGlobalVoteText, messageBuilder, buildStartGameMessage } from './utils/textUtils';
 import cloneDeep from 'clone-deep';
 
 //types
@@ -39,7 +40,7 @@ const initialGameState: Game = {
     partySize: 0,
     evilScore: 0,
     goodScore: 0,
-    currentRound: 0,
+    currentQuest: 0,
     currentLeader: null,
     nominatedPlayers: [],
     extraRoles: [],
@@ -75,12 +76,17 @@ const inlineKeyboard = new InlineKeyboard().text('Join', 'join-game').row().text
 
 bot.command('new', async (ctx, next) => {
     ctx.session.game = cloneDeep(initialGameState);
-    await ctx.reply(
-        `Press Join if you want to play. \nWhen everyone is ready press Start.\nUse /roles to add extra roles to the game`,
-        {
+
+    if (ctx.from?.id) {
+        ctx.session.game.hostId = ctx.from?.id;
+
+        await ctx.reply(buildStartGameMessage(ctx.session.game.allPlayers, ctx.from?.id!), {
             reply_markup: inlineKeyboard,
-        },
-    );
+            parse_mode: 'MarkdownV2',
+        });
+    } else {
+        await ctx.reply("Couldn't start the game due to invalid host id");
+    }
 
     await next();
 });
@@ -91,19 +97,12 @@ bot.callbackQuery('join-game', async (ctx, next) => {
         return;
     }
     if (ctx.from?.id && !ctx.session.game.allPlayers.some((pl) => pl.telegramId === ctx.from.id)) {
-        ctx.session.game.allPlayers.push({
-            telegramId: ctx.from.id,
-            id: 0,
-            role: null,
-            username: ctx.from.username || '',
-            name: ctx.from.first_name || '',
+        ctx.session.game.allPlayers.push(mapUserToPlayer(ctx.from));
+
+        await ctx.reply(buildStartGameMessage(ctx.session.game.allPlayers, ctx.session.game.hostId!), {
+            reply_markup: inlineKeyboard,
+            parse_mode: 'MarkdownV2',
         });
-        await ctx.editMessageText(
-            `Press Join if you want to play. \nWhen everyone is ready press Start.\nCurrently joined: \n${ctx.session.game.allPlayers
-                .map(getPlayerRef)
-                .join('\n')}`,
-            { reply_markup: inlineKeyboard },
-        );
     }
 
     await next();
@@ -117,8 +116,8 @@ bot.callbackQuery('start-game', async (ctx, next) => {
         return;
     }
 
-    ctx.session.game.currentRound = 1;
-    ctx.session.game.partySize = QUESTS[ctx.session.game.allPlayers.length][ctx.session.game.currentRound - 1];
+    ctx.session.game.currentQuest = 1;
+    ctx.session.game.partySize = QUESTS[ctx.session.game.allPlayers.length][ctx.session.game.currentQuest - 1];
 
     const assignedRoles = generateRoles(ctx.session.game.allPlayers, ctx.session.extraRoles);
     ctx.session.game.allPlayers = assignedRoles.allPlayers;
@@ -129,27 +128,26 @@ bot.callbackQuery('start-game', async (ctx, next) => {
         // TODO Maybe and emojis for each role and side
         const messages = [
             `Your role is <b>${player.role.roleName}<b>`,
-            `You play on the side of <b>${player.role.side}<b>`,
+            `You play on the side of <b>${player.role.side}<b> ${player.role.side === SIDES.EVIL ? '😈' : '😇'}`,
         ];
 
         if (player.role.side === SIDES.EVIL) {
             if (player.role.key !== ROLE_LIST.OBERON) {
-                const otherEvilPlayers = assignedRoles.evil
-                    .reduce((acc: string[], evilPlayer) => {
-                        if (evilPlayer.role.key !== ROLE_LIST.OBERON && player.telegramId !== evilPlayer.telegramId) {
-                            acc.push(getPlayerRef(evilPlayer));
-                        }
-                        return acc;
-                    }, [])
-                    .join(', ');
-
-                messages.push(`Other Evil players are: ${otherEvilPlayers}`);
+                const otherEvilPlayers = assignedRoles.evil.reduce((acc: string[], evilPlayer) => {
+                    if (evilPlayer.role.key !== ROLE_LIST.OBERON && player.telegramId !== evilPlayer.telegramId) {
+                        acc.push(getPlayerRef(evilPlayer));
+                    }
+                    return acc;
+                }, []);
+                if (otherEvilPlayers.length) {
+                    messages.push(`Other Evil players are: ${otherEvilPlayers.join(', ')}`);
+                }
             }
         }
 
         const initialMessage = createMessageByRole(player.role.key, assignedRoles);
         messages.push(initialMessage);
-        await bot.api.sendMessage(player.telegramId, messageBuilder(messages), { parse_mode: 'HTML' });
+        await bot.api.sendMessage(player.telegramId, messageBuilder(...messages), { parse_mode: 'HTML' });
     });
     // TODO automatically open nominations
     await ctx.editMessageText('The game has started!');
@@ -161,21 +159,21 @@ bot.callbackQuery('start-game', async (ctx, next) => {
 bot.filter((ctx) => ctx.from?.id === ctx.session.game.currentLeader?.telegramId).command(
     'continue',
     async (ctx, next) => {
-        // TODO check for how the quest vote finished to account for failed quest
         const { allPlayers, currentLeader } = ctx.session.game;
-        ctx.session.game.currentRound += 1;
-        ctx.session.game.nominatedPlayers = [];
-        ctx.session.game.partySize = QUESTS[allPlayers.length][ctx.session.game.currentRound - 1];
         const currLeaderId = currentLeader?.id || 0;
         const newLeaderId = currLeaderId === allPlayers.length ? 1 : currLeaderId + 1;
         const newLeader = allPlayers.find((pl) => pl.id === newLeaderId);
         ctx.session.game.currentLeader = newLeader!;
+
         await ctx.reply(
-            `New round has started! New leader is ${getPlayerRef(newLeader)}\nRound number: ${
-                ctx.session.game.currentRound
-            }\nRequired party size is ${ctx.session.game.partySize}\nCurrent score is Good ${
-                ctx.session.game.goodScore
-            } - ${ctx.session.game.evilScore} Evil \nUse /nominate to choose them`,
+            messageBuilder(
+                'New round has started!',
+                `New leader is ${getPlayerRef(newLeader)}`,
+                `Quest number: ${ctx.session.game.currentQuest}`,
+                `Required party size is ${ctx.session.game.partySize}`,
+                `Current score is Good ${ctx.session.game.goodScore} - ${ctx.session.game.evilScore} Evil`,
+                'Use /nominate to select new party',
+            ),
         );
         await next();
     },
