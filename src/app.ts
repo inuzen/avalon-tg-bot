@@ -82,7 +82,7 @@ bot.command('new', async (ctx, next) => {
 
         await ctx.reply(buildStartGameMessage(ctx.session.game.allPlayers, ctx.from?.id!), {
             reply_markup: inlineKeyboard,
-            parse_mode: 'MarkdownV2',
+            parse_mode: 'HTML',
         });
     } else {
         await ctx.reply("Couldn't start the game due to invalid host id");
@@ -99,9 +99,9 @@ bot.callbackQuery('join-game', async (ctx, next) => {
     if (ctx.from?.id && !ctx.session.game.allPlayers.some((pl) => pl.telegramId === ctx.from.id)) {
         ctx.session.game.allPlayers.push(mapUserToPlayer(ctx.from));
 
-        await ctx.reply(buildStartGameMessage(ctx.session.game.allPlayers, ctx.session.game.hostId!), {
+        await ctx.editMessageText(buildStartGameMessage(ctx.session.game.allPlayers, ctx.session.game.hostId!), {
             reply_markup: inlineKeyboard,
-            parse_mode: 'MarkdownV2',
+            parse_mode: 'HTML',
         });
     }
 
@@ -111,10 +111,10 @@ bot.callbackQuery('join-game', async (ctx, next) => {
 bot.callbackQuery('start-game', async (ctx, next) => {
     // TODO check that game can be started
     const currentPlayers = ctx.session.game.allPlayers.length;
-    if (currentPlayers < 5) {
-        await ctx.reply('Need more players to start');
-        return;
-    }
+    // if (currentPlayers < 5) {
+    //     await ctx.reply('Need more players to start');
+    //     return;
+    // }
 
     ctx.session.game.currentQuest = 1;
     ctx.session.game.partySize = QUESTS[ctx.session.game.allPlayers.length][ctx.session.game.currentQuest - 1];
@@ -127,8 +127,8 @@ bot.callbackQuery('start-game', async (ctx, next) => {
     assignedRoles.allPlayers.forEach(async (player) => {
         // TODO Maybe and emojis for each role and side
         const messages = [
-            `Your role is <b>${player.role.roleName}<b>`,
-            `You play on the side of <b>${player.role.side}<b> ${player.role.side === SIDES.EVIL ? '😈' : '😇'}`,
+            `Your role is <b>${player.role.roleName}</b>`,
+            `You play on the side of <b>${player.role.side}</b> ${player.role.side === SIDES.EVIL ? '😈' : '😇'}`,
         ];
 
         if (player.role.side === SIDES.EVIL) {
@@ -151,7 +151,7 @@ bot.callbackQuery('start-game', async (ctx, next) => {
     });
     // TODO automatically open nominations
     await ctx.editMessageText('The game has started!');
-    await ctx.reply(`The leader is 👑${getPlayerRef(leader!)}👑\nUse /nominate to open menu`);
+    await ctx.reply(`👑 The leader is ${getPlayerRef(leader!)}\nUse /nominate to open menu`);
 
     await next();
 });
@@ -183,7 +183,7 @@ bot.filter((ctx) => ctx.from?.id === ctx.session.game.currentLeader?.telegramId)
     'nominate',
     async (ctx, next) => {
         const { partySize, nominatedPlayers } = ctx.session.game;
-        await ctx.reply(getGlobalVoteText(partySize, nominatedPlayers.length), {
+        await ctx.reply(getGlobalVoteText(nominatedPlayers.length, partySize), {
             reply_markup: nominateMenu,
         });
 

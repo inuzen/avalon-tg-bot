@@ -6,13 +6,13 @@ export const messageBuilder = (...lines: string[]) => lines.join('\n');
 export const buildStartGameMessage = (joinedPlayers: Player[], hostId: number) => {
     const commonLines = [
         'Press Join if you want to play.',
-        `The [host](tg://user?id=${hostId}) - can add extra /roles.`,
+        `The <a href="tg://user?id=${hostId}">host</a> can add extra /roles.`,
         'To begin the host should press Start',
     ];
     if (joinedPlayers.length === 0) {
         commonLines.push('No one has joined yet');
     } else {
-        commonLines.push(`Currently joined: ${joinedPlayers.map(getPlayerRef).join('\n')}`);
+        commonLines.push(`Currently joined:`, ...joinedPlayers.map(getPlayerRef));
     }
     return messageBuilder(...commonLines);
 };
@@ -38,8 +38,8 @@ export const renderVoteResults = (votingArray: Vote[]) => {
 
 export const getEndGameMessage = (players: Player[], winSide: SIDES) => {
     return messageBuilder(
-        `🏆 Forces of *${winSide}* won! 🏆`,
+        `🏆 Forces of <b>${winSide}</b> won! 🏆`,
         'Here is a list of who were who:',
-        ...players.map((player) => `*${player.role?.roleName}* - ${getPlayerRef(player)}`),
+        ...players.map((player) => `<b>${player.role?.roleName}</b> - ${getPlayerRef(player)}`),
     );
 };
