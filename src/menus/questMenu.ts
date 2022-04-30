@@ -15,7 +15,8 @@ export const questMenu = new Menu<MyContext>('quest-menu', { autoAnswer: false }
     .text('Fail!', async (ctx, next) => {
         await countQuestVote(ctx, false);
         await next();
-    });
+    })
+    .row();
 
 const countQuestVote = async (ctx: MyContext, vote: boolean) => {
     if (ctx.session.game.votingArray.find((v) => v.player?.telegramId === ctx.from?.id)) {
@@ -31,7 +32,6 @@ const countQuestVote = async (ctx: MyContext, vote: boolean) => {
         await ctx.answerCallbackQuery('You are not in the party!');
         return;
     }
-    // something wrong - nominated players cleared too early
     await ctx.editMessageText(getVoteSuccessMsg(nominatedPlayers, ctx.session.game.votingArray.length));
 };
 

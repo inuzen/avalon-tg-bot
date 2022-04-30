@@ -13,7 +13,7 @@ import { assassinMenu } from './menus/assassinMenu';
 
 // utils
 import { getPlayerRef, mapUserToPlayer } from './utils/utils';
-import { getGlobalVoteText, messageBuilder, buildStartGameMessage } from './utils/textUtils';
+import { getGlobalVoteText, messageBuilder, buildStartGameMessage, renderQuestHistory } from './utils/textUtils';
 import cloneDeep from 'clone-deep';
 
 //types
@@ -55,6 +55,7 @@ bot.use(
         initial: (): SessionData => ({
             game: cloneDeep(initialGameState),
             extraRoles: [],
+            roleMenuCallerId: undefined,
         }),
     }),
 );
@@ -197,6 +198,7 @@ bot.filter((ctx) => ctx.from?.id === ctx.session.game.currentLeader?.telegramId)
 // TODO add /desc command to get description of the role in private chat
 
 bot.command('roles', async (ctx, next) => {
+    ctx.session.roleMenuCallerId = ctx.from?.id;
     await ctx.reply(
         'Select extra roles to be used in a game.\nIt persists between session but will be emptied if bot was offline',
         { reply_markup: roleMenu },
@@ -206,6 +208,19 @@ bot.command('roles', async (ctx, next) => {
 
 bot.command('rules', async (ctx, next) => {
     await ctx.reply('Rules can be found here https://www.ultraboardgames.com/avalon/game-rules.php');
+
+    await next();
+});
+bot.command('foo', async (ctx, next) => {
+    await ctx.reply(
+        renderQuestHistory({
+            1: true,
+            2: false,
+            3: null,
+            4: null,
+            5: null,
+        }),
+    );
 
     await next();
 });

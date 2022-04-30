@@ -32,7 +32,7 @@ assassinMenu
         }
     })
     .text(
-        (ctx) => `Confirm kill ${ctx.session.game.possibleMerlin ? '🔒' : ''}`,
+        (ctx) => `Confirm kill ${!ctx.session.game.possibleMerlin ? '🔒' : ''}`,
         async (ctx, next) => {
             const { possibleMerlin, allPlayers } = ctx.session.game;
             const assassin = allPlayers.find((pl) => pl.role?.key === ROLE_LIST.ASSASSIN);

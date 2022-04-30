@@ -56,10 +56,11 @@ export const getVoteSuccessMsg = (nominatedPlayers: Player[], voted: number, isF
 
 export const renderQuestHistory = (questHistory: Record<number, boolean | null>) => {
     const messageLines = ['Quest progress:', '| 1 | 2 | 3 | 4 | 5 |'];
-    let history = '|';
+    let history = '| ';
     for (const value of Object.values(questHistory)) {
         if (typeof value === 'boolean') {
-            history += ` ${value ? '✅' : '❌'} |`;
+            // history += `${value ? '✅' : '❌'}|`;
+            history += `${value ? 'W' : 'L'}|`;
         } else {
             history += `  |`;
         }

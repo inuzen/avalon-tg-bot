@@ -3,6 +3,7 @@ import { Context, SessionFlavor } from 'grammy';
 export interface SessionData {
     game: Game;
     extraRoles: ROLE_LIST[];
+    roleMenuCallerId: number | undefined;
 }
 
 export type MyContext = Context & SessionFlavor<SessionData>;
