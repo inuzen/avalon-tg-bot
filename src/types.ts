@@ -20,6 +20,7 @@ export interface Game {
     missedVotes: number;
     votingArray: Vote[];
     possibleMerlin: Player | null;
+    questHistory: Record<number, boolean | null>;
 }
 export type Vote = {
     vote: boolean;

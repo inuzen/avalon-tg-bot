@@ -1,4 +1,4 @@
-import { getEndGameMessage, messageBuilder } from './../utils/textUtils';
+import { getEndGameMessage, getVoteSuccessMsg, messageBuilder } from './../utils/textUtils';
 import { Player, MyContext, SIDES } from '../types';
 import { Menu } from '@grammyjs/menu';
 import { getPlayerRef, checkForEveryoneAndRenderResults } from '../utils/utils';
@@ -6,10 +6,10 @@ import { getPartyVoteText } from '../utils/textUtils';
 import { questMenu } from './questMenu';
 import { QUESTS } from '../engine/engine';
 
-// TODO Probably have to change this to /yes and /no commands
 const countGlobalVote = async (ctx: MyContext, vote: boolean) => {
     const { allPlayers, nominatedPlayers } = ctx.session.game;
     if (ctx.session.game.votingArray.find((pl) => pl.player?.telegramId === ctx.from?.id)) {
+        await ctx.answerCallbackQuery("You've already voted!");
         return;
     }
     ctx.session.game.votingArray.push({
@@ -19,21 +19,23 @@ const countGlobalVote = async (ctx: MyContext, vote: boolean) => {
     await ctx.editMessageText(
         getPartyVoteText(nominatedPlayers, ctx.session.game.votingArray.length, allPlayers.length),
     );
+    await ctx.answerCallbackQuery('Your vote is added');
 };
 
 const resume = async (ctx: MyContext) => {
     const { allPlayers, nominatedPlayers, currentLeader } = ctx.session.game;
     if (ctx.from?.id !== currentLeader?.telegramId) {
+        await ctx.answerCallbackQuery('Only current leader can resume');
         return;
     }
 
     const voteResultList = checkForEveryoneAndRenderResults(allPlayers, ctx.session.game.votingArray);
-    // console.log(voteResultList);
 
     if (voteResultList) {
-        await ctx.reply(voteResultList);
         // @ts-ignore
         await ctx.menu.close();
+        // TODO maybe edit old message instead of a new one
+        await ctx.reply(voteResultList);
 
         const votePassed =
             ctx.session.game.votingArray.reduce((acc, vote) => {
@@ -44,15 +46,9 @@ const resume = async (ctx: MyContext) => {
 
         if (votePassed) {
             ctx.session.game.missedVotes = 0;
-            // TODO use textutils here and in quest menu
-            await ctx.reply(
-                `✅ Vote successful! ✅\nNow The outcome of the quest depends on ${nominatedPlayers
-                    .map(getPlayerRef)
-                    .join(', ')}.`,
-                {
-                    reply_markup: questMenu,
-                },
-            );
+            await ctx.reply(getVoteSuccessMsg(nominatedPlayers, 0), {
+                reply_markup: questMenu,
+            });
         } else {
             ctx.session.game.missedVotes += 1;
             ctx.session.game.nominatedPlayers = [];
@@ -65,19 +61,19 @@ const resume = async (ctx: MyContext) => {
                     `Missed votes in a row: ${ctx.session.game.missedVotes}`,
                 ),
             );
-            // TODO continue the same round
             if (ctx.session.game.missedVotes === 5) {
                 await ctx.reply(getEndGameMessage(allPlayers, SIDES.EVIL), {
                     parse_mode: 'HTML',
                 });
             } else {
+                // TODO Replace continue command with a button in both places
                 await ctx.reply(`Discuss what happened and then the leader can /continue when ready`);
             }
         }
     }
 };
 
-export const globalVoteMenu = new Menu<MyContext>('global-vote')
+export const globalVoteMenu = new Menu<MyContext>('global-vote', { autoAnswer: false })
     .text('Yes, i trust them completely 👍', async (ctx, next) => {
         await countGlobalVote(ctx, true);
         await next();

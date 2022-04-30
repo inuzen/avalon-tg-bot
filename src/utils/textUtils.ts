@@ -1,4 +1,4 @@
-import { Player, SIDES, Vote } from '../types';
+import { Game, Player, SIDES, Vote } from '../types';
 import { getPlayerRef } from './utils';
 
 export const messageBuilder = (...lines: string[]) => lines.join('\n');
@@ -42,4 +42,27 @@ export const getEndGameMessage = (players: Player[], winSide: SIDES) => {
         'Here is a list of who were who:',
         ...players.map((player) => `<b>${player.role?.roleName}</b> - ${getPlayerRef(player)}`),
     );
+};
+
+export const getVoteSuccessMsg = (nominatedPlayers: Player[], voted: number, isFourth: boolean = false) => {
+    return messageBuilder(
+        '✅ Vote successful! ✅',
+        "Now it's all in the hands of:",
+        ...nominatedPlayers.map(getPlayerRef),
+        `${voted} out of ${nominatedPlayers.length} voted`,
+        isFourth ? '* Need 2 ❌ for this quest to fail' : '',
+    );
+};
+
+export const renderQuestHistory = (questHistory: Record<number, boolean | null>) => {
+    const messageLines = ['Quest progress:', '| 1 | 2 | 3 | 4 | 5 |'];
+    let history = '|';
+    for (const value of Object.values(questHistory)) {
+        if (typeof value === 'boolean') {
+            history += ` ${value ? '✅' : '❌'} |`;
+        } else {
+            history += `  |`;
+        }
+    }
+    return messageBuilder(...messageLines, history);
 };

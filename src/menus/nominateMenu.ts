@@ -4,7 +4,7 @@ import { getPlayerRef } from '../utils/utils';
 import { getGlobalVoteText, getPartyVoteText } from '../utils/textUtils';
 import { globalVoteMenu } from './globalVoteMenu';
 
-export const nominateMenu = new Menu<MyContext>('nominate-menu');
+export const nominateMenu = new Menu<MyContext>('nominate-menu', { autoAnswer: false });
 
 nominateMenu.dynamic((ctx, range) => {
     for (const player of ctx.session.game.allPlayers) {
@@ -19,24 +19,28 @@ nominateMenu.dynamic((ctx, range) => {
                 async (ctx, next) => {
                     const { nominatedPlayers, currentLeader, partySize } = ctx.session.game;
                     if (currentLeader?.telegramId !== ctx.from.id) {
-                        await ctx.reply(`Only current leader can nominate players. Be patient, ${ctx.from.first_name}`);
+                        await ctx.answerCallbackQuery(`Only current leader can nominate players`);
+                        // await ctx.reply();
                         return;
                     }
 
                     if (nominatedPlayers.some((pl) => pl.telegramId === player.telegramId)) {
+                        // await ctx.answerCallbackQuery();
                         ctx.session.game.nominatedPlayers = nominatedPlayers.filter(
                             (el) => el.telegramId !== player.telegramId,
                         );
                         const msgText = getGlobalVoteText(ctx.session.game.nominatedPlayers.length, partySize);
                         await ctx.editMessageText(msgText);
                     } else if (nominatedPlayers.length === partySize) {
-                        await ctx.reply(`The party is full. You need to deselect someone if you want to replace them`);
+                        await ctx.answerCallbackQuery(`The party is full`);
                         return;
                     } else {
+                        // await ctx.answerCallbackQuery();
                         ctx.session.game.nominatedPlayers.push(player);
                         const msgText = getGlobalVoteText(ctx.session.game.nominatedPlayers.length, partySize);
                         await ctx.editMessageText(msgText);
                     }
+
                     await next();
                 },
             )
@@ -44,14 +48,28 @@ nominateMenu.dynamic((ctx, range) => {
     }
 });
 
-nominateMenu.text('Confirm Party', async (ctx, next) => {
-    const { nominatedPlayers, partySize, allPlayers } = ctx.session.game;
-    if (nominatedPlayers.length === partySize) {
-        await ctx.menu.close();
-        ctx.session.game.votingArray = [];
-        await ctx.reply(getPartyVoteText(nominatedPlayers, 0, allPlayers.length), {
-            reply_markup: globalVoteMenu,
-        });
-    }
-    await next();
-});
+nominateMenu.text(
+    (ctx) => {
+        const { nominatedPlayers, partySize } = ctx.session.game;
+        const locked = nominatedPlayers.length !== partySize;
+        return `Confirm Party ${locked ? '🔒' : ''}`;
+    },
+    async (ctx, next) => {
+        const { nominatedPlayers, partySize, allPlayers, currentLeader } = ctx.session.game;
+        if (ctx.from.id !== currentLeader?.telegramId) {
+            ctx.answerCallbackQuery('Only leader can confirm the party');
+            return;
+        }
+
+        if (nominatedPlayers.length === partySize) {
+            await ctx.menu.close();
+            ctx.session.game.votingArray = [];
+            await ctx.reply(getPartyVoteText(nominatedPlayers, 0, allPlayers.length), {
+                reply_markup: globalVoteMenu,
+            });
+        } else {
+            await ctx.answerCallbackQuery('Need to select more players');
+        }
+        await next();
+    },
+);

@@ -47,6 +47,7 @@ const initialGameState: Game = {
     missedVotes: 0,
     votingArray: [],
     possibleMerlin: null,
+    questHistory: { 1: null, 2: null, 3: null, 4: null, 5: null },
 };
 
 bot.use(
@@ -103,6 +104,8 @@ bot.callbackQuery('join-game', async (ctx, next) => {
             reply_markup: inlineKeyboard,
             parse_mode: 'HTML',
         });
+    } else {
+        await ctx.answerCallbackQuery("You've already joined!");
     }
 
     await next();
