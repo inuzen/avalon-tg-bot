@@ -17,12 +17,12 @@ You have 2 options to enable this bot:
 2. Clone this repo, host it somewhere you like and create your own bot with the help of @BotFather.
 
 ## How to play
-
-1. You can configure additional roles by using /roles command. By default game has Merlin, Assassin, Minion and Servant.
-2. Start the game with /new command
+1. Everyone who wants to play must start private convo with the bot (Go to bot DMs and press start);
+2. You can configure additional roles by using /roles command. By default game has Merlin, Assassin, Minion and Servant;
+3. Start the game with /new command
     > Note that /new resets game progress so if you run /start in the middle of a game - it would be overwritten.
-3. Everyone who wants to play should press Join. After that press "start game" to begin.
-4. After that the bot will take you on a chain of messages with instructions which should be easy to follow. _See notes bellow_
+4. Everyone who wants to play should press Join. After that press "start game" to begin;
+5. After that the bot will take you on a chain of messages with instructions which should be easy to follow. _See notes bellow_
 
 # Important Notes:
 
