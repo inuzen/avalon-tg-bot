@@ -11,7 +11,9 @@ The rules for the game: https://www.ultraboardgames.com/avalon/game-rules.php
 You have 2 options to enable this bot:
 
 1. Add @Avalon_Inuzen_Bot to your chat group. (Might be offline since it's hosted on free heroku)
+
    or
+   
 2. Clone this repo, host it somewhere you like and create your own bot with the help of @BotFather.
 
 ## How to play
