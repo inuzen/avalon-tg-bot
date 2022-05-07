@@ -227,6 +227,8 @@ bot.command('help', async (ctx, next) => {
             '',
             `Use /roles to select additional roles for the game`,
             '',
+            'Before joining the game make sure to start the dialog with the bot. Got to bot DMs and press start',
+            '',
             "<b>IMPORTANT!</b> If the bot doesn't respond to your action - just wait. DO NOT spam click buttons as it may break the bot",
             '',
             'The game consists of several rounds. Only current LEADER can press continue buttons on a menu(except for assassin menu).',
