@@ -47,8 +47,8 @@ questMenu.text(
             ctx.answerCallbackQuery('Only leader can reveal results');
             return;
         }
-        // TODO they might both be 0
-        if (nominatedPlayers.length !== ctx.session.game.votingArray.length) {
+
+        if (nominatedPlayers.length && nominatedPlayers.length !== ctx.session.game.votingArray.length) {
             await ctx.answerCallbackQuery('Not enough players voted');
             return;
         }
@@ -75,10 +75,12 @@ questMenu.text(
             await ctx.reply(
                 messageBuilder(
                     'Good wins... but not just yet!',
+                    '',
                     'Evil has last chance to snatch the victory!',
                     `If Assassin ${getPlayerRef(
                         allPlayers.find((pl) => pl.role?.key === ROLE_LIST.ASSASSIN),
                     )} kills Merlin then Evil will triumph!`,
+                    '',
                     'Please select who you think is Merlin ⬇️',
                 ),
                 { reply_markup: assassinMenu, parse_mode: 'HTML' },

@@ -17,10 +17,12 @@ export const buildStartGameMessage = (joinedPlayers: Player[], hostId: number) =
     return messageBuilder(...commonLines);
 };
 
-export const getGlobalVoteText = (have: number, need: number) => {
+export const getGlobalVoteText = (have: number, need: number, questN?: number) => {
     return messageBuilder(
         `Leader must select ${need} players for this Quest`,
         `Currently selected ${have} out of ${need}`,
+        '',
+        questN === 4 ? '* 2 ❌ required for this quest to fail' : '',
     );
 };
 
@@ -39,31 +41,33 @@ export const renderVoteResults = (votingArray: Vote[]) => {
 export const getEndGameMessage = (players: Player[], winSide: SIDES) => {
     return messageBuilder(
         `🏆 Forces of <b>${winSide}</b> won! 🏆`,
+        '',
         'Here is a list of who were who:',
         ...players.map((player) => `<b>${player.role?.roleName}</b> - ${getPlayerRef(player)}`),
     );
 };
 
-export const getVoteSuccessMsg = (nominatedPlayers: Player[], voted: number, isFourth: boolean = false) => {
+export const getVoteSuccessMsg = (nominatedPlayers: Player[], voted: number) => {
     return messageBuilder(
         '✅ Vote successful! ✅',
+        '',
         "Now it's all in the hands of:",
         ...nominatedPlayers.map(getPlayerRef),
+        '',
         `${voted} out of ${nominatedPlayers.length} voted`,
-        isFourth ? '* Need 2 ❌ for this quest to fail' : '',
     );
 };
 
 export const renderQuestHistory = (questHistory: Record<number, boolean | null>) => {
-    const messageLines = ['Quest progress:', '| 1 | 2 | 3 | 4 | 5 |'];
-    let history = '| ';
+    const messageLines = ['Quest progress:', '<code>| 1 | 2 | 3 | 4 | 5 |'];
+    let history = '|';
     for (const value of Object.values(questHistory)) {
         if (typeof value === 'boolean') {
             // history += `${value ? '✅' : '❌'}|`;
-            history += `${value ? 'W' : 'L'}|`;
+            history += `${value ? ' W ' : ' L '}|`;
         } else {
-            history += `  |`;
+            history += ` N |`;
         }
     }
-    return messageBuilder(...messageLines, history);
+    return messageBuilder(...messageLines, history, '</code>');
 };

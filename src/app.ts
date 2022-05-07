@@ -21,7 +21,7 @@ import { Game, ROLE_LIST, SIDES, MyContext, SessionData } from './types';
 
 require('dotenv').config();
 
-// TODO Everywhere where session is set - use next()
+// TODO Add filters for group and private chat messages
 // TODO Allow only the host to change settings, continue rounds and stop games
 
 const token = process.env.BOT_TOKEN;
@@ -113,12 +113,16 @@ bot.callbackQuery('join-game', async (ctx, next) => {
 });
 
 bot.callbackQuery('start-game', async (ctx, next) => {
-    // TODO check that game can be started
+    if (ctx.session.game.hostId !== ctx.from.id) {
+        await ctx.answerCallbackQuery('Only host can start the game');
+        return;
+    }
+
     const currentPlayers = ctx.session.game.allPlayers.length;
-    // if (currentPlayers < 5) {
-    //     await ctx.reply('Need more players to start');
-    //     return;
-    // }
+    if (currentPlayers < 5) {
+        await ctx.answerCallbackQuery('Need more players to start');
+        return;
+    }
 
     ctx.session.game.currentQuest = 1;
     ctx.session.game.partySize = QUESTS[ctx.session.game.allPlayers.length][ctx.session.game.currentQuest - 1];
@@ -171,12 +175,15 @@ bot.filter((ctx) => ctx.from?.id === ctx.session.game.currentLeader?.telegramId)
 
         await ctx.reply(
             messageBuilder(
-                'New round has started!',
-                `New leader is ${getPlayerRef(newLeader)}`,
-                `Quest number: ${ctx.session.game.currentQuest}`,
+                '⏳ New round has started!',
+                '',
+                `👑 New leader is ${getPlayerRef(newLeader)}`,
+                `📍 Quest number: ${ctx.session.game.currentQuest}`,
                 `Required party size is ${ctx.session.game.partySize}`,
+                '',
                 `Current score is Good ${ctx.session.game.goodScore} - ${ctx.session.game.evilScore} Evil`,
-                'Use /nominate to select new party',
+                '',
+                'Leader should /nominate a new party',
             ),
         );
         await next();
@@ -187,7 +194,7 @@ bot.filter((ctx) => ctx.from?.id === ctx.session.game.currentLeader?.telegramId)
     'nominate',
     async (ctx, next) => {
         const { partySize, nominatedPlayers } = ctx.session.game;
-        await ctx.reply(getGlobalVoteText(nominatedPlayers.length, partySize), {
+        await ctx.reply(getGlobalVoteText(nominatedPlayers.length, partySize, ctx.session.game.currentQuest), {
             reply_markup: nominateMenu,
         });
 
@@ -195,12 +202,13 @@ bot.filter((ctx) => ctx.from?.id === ctx.session.game.currentLeader?.telegramId)
     },
 );
 
-// TODO add /desc command to get description of the role in private chat
-
 bot.command('roles', async (ctx, next) => {
     ctx.session.roleMenuCallerId = ctx.from?.id;
     await ctx.reply(
-        'Select extra roles to be used in a game.\nIt persists between session but will be emptied if bot was offline',
+        messageBuilder(
+            'Select extra roles to be used in a game.',
+            'It persists between sessions but will be set to default if bot was offline',
+        ),
         { reply_markup: roleMenu },
     );
     await next();
@@ -211,15 +219,21 @@ bot.command('rules', async (ctx, next) => {
 
     await next();
 });
-bot.command('foo', async (ctx, next) => {
+
+bot.command('help', async (ctx, next) => {
     await ctx.reply(
-        renderQuestHistory({
-            1: true,
-            2: false,
-            3: null,
-            4: null,
-            5: null,
-        }),
+        messageBuilder(
+            'Use /new to start the game',
+            '',
+            `Use /roles to select additional roles for the game`,
+            '',
+            "<b>IMPORTANT!</b> If the bot doesn't respond to your action - just wait. DO NOT spam click buttons as it may break the bot",
+            '',
+            'The game consists of several rounds. Only current LEADER can press continue buttons on a menu(except for assassin menu).',
+            'After game starts it will display messages on how to proceed. So read the messages ',
+            '',
+            "If something doesn't work or some bug is discovered, please contact @inuzen",
+        ),
     );
 
     await next();

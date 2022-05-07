@@ -57,7 +57,9 @@ const resume = async (ctx: MyContext) => {
             await ctx.reply(
                 messageBuilder(
                     '‼️ Vote Failed ‼️',
+                    '',
                     'If you fail to go on a quest 5 times in a row then EVIL wins!',
+                    '',
                     `Missed votes in a row: ${ctx.session.game.missedVotes}`,
                 ),
             );

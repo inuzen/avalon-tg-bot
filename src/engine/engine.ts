@@ -4,8 +4,6 @@ import { ROLES, Player, Role, SIDES, ROLE_LIST } from '../types';
 // TODO maybe join role and quest constants
 // in a format of "player_count": [good, evil]
 const ROLE_DISTRIBUTION: Record<number, number[]> = {
-    2: [1, 1], // TODO delete after test
-    4: [2, 2], // TODO delete after test
     5: [3, 2],
     6: [4, 2],
     7: [4, 3],
@@ -16,8 +14,6 @@ const ROLE_DISTRIBUTION: Record<number, number[]> = {
 
 // playerCount: [1st quest party size, 2nd quest party size, ...]
 export const QUESTS: Record<number, number[]> = {
-    2: [1, 1, 1, 1, 1],
-    4: [1, 2, 1, 3, 3],
     5: [2, 3, 2, 3, 3],
     6: [2, 3, 4, 3, 4],
     7: [2, 3, 3, 4, 4],

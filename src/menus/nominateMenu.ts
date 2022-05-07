@@ -17,27 +17,32 @@ nominateMenu.dynamic((ctx, range) => {
                         : playerRef;
                 },
                 async (ctx, next) => {
-                    const { nominatedPlayers, currentLeader, partySize } = ctx.session.game;
+                    const { nominatedPlayers, currentLeader, partySize, currentQuest } = ctx.session.game;
                     if (currentLeader?.telegramId !== ctx.from.id) {
                         await ctx.answerCallbackQuery(`Only current leader can nominate players`);
-                        // await ctx.reply();
                         return;
                     }
 
                     if (nominatedPlayers.some((pl) => pl.telegramId === player.telegramId)) {
-                        // await ctx.answerCallbackQuery();
                         ctx.session.game.nominatedPlayers = nominatedPlayers.filter(
                             (el) => el.telegramId !== player.telegramId,
                         );
-                        const msgText = getGlobalVoteText(ctx.session.game.nominatedPlayers.length, partySize);
+                        const msgText = getGlobalVoteText(
+                            ctx.session.game.nominatedPlayers.length,
+                            partySize,
+                            currentQuest,
+                        );
                         await ctx.editMessageText(msgText);
                     } else if (nominatedPlayers.length === partySize) {
                         await ctx.answerCallbackQuery(`The party is full`);
                         return;
                     } else {
-                        // await ctx.answerCallbackQuery();
                         ctx.session.game.nominatedPlayers.push(player);
-                        const msgText = getGlobalVoteText(ctx.session.game.nominatedPlayers.length, partySize);
+                        const msgText = getGlobalVoteText(
+                            ctx.session.game.nominatedPlayers.length,
+                            partySize,
+                            currentQuest,
+                        );
                         await ctx.editMessageText(msgText);
                     }
 
