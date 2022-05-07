@@ -234,6 +234,7 @@ bot.command('help', async (ctx, next) => {
             '',
             "If something doesn't work or some bug is discovered, please contact @inuzen",
         ),
+        { parse_mode: 'HTML' },
     );
 
     await next();
