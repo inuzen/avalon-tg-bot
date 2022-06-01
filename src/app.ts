@@ -13,7 +13,7 @@ import { assassinMenu } from './menus/assassinMenu';
 
 // utils
 import { getPlayerRef, mapUserToPlayer } from './utils/utils';
-import { getGlobalVoteText, messageBuilder, buildStartGameMessage, renderQuestHistory } from './utils/textUtils';
+import { getGlobalVoteText, messageBuilder, buildStartGameMessage } from './utils/textUtils';
 import cloneDeep from 'clone-deep';
 
 //types

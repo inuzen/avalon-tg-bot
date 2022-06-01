@@ -6,7 +6,8 @@
     "scripts": {
         "build": "tsc",
         "start": "node dist/app.js",
-        "dev": "nodemon src/app.ts"
+        "dev": "nodemon src/app.ts",
+        "push": "git push origin main && git push heroku main"
     },
     "author": "",
     "license": "ISC",

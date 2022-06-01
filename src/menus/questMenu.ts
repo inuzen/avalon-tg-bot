@@ -24,9 +24,9 @@ const countQuestVote = async (ctx: MyContext, vote: boolean) => {
         return;
     }
     const { nominatedPlayers } = ctx.session.game;
-
-    if (ctx.session.game.nominatedPlayers.some((el) => el.telegramId === ctx.from?.id)) {
-        ctx.session.game.votingArray.push({ vote });
+    const player = nominatedPlayers.find((p) => p.telegramId === ctx.from?.id);
+    if (!!player) {
+        ctx.session.game.votingArray.push({ vote, player });
         await ctx.answerCallbackQuery('Vote accepted');
     } else {
         await ctx.answerCallbackQuery('You are not in the party!');
@@ -53,18 +53,19 @@ questMenu.text(
             return;
         }
 
-        const voteFailed =
-            currentQuest === 4
-                ? ctx.session.game.votingArray.filter((el) => !el.vote).length < 2
-                : ctx.session.game.votingArray.some((el) => !el.vote);
+        const failedVotes = ctx.session.game.votingArray.filter((v) => !v.vote).length;
+        const voteFailed = currentQuest === 4 ? failedVotes < 2 : failedVotes > 0;
+
         voteFailed ? (ctx.session.game.evilScore += 1) : (ctx.session.game.goodScore += 1);
         ctx.session.game.questHistory[currentQuest] = !voteFailed;
 
         await ctx.reply(
             messageBuilder(
                 `${voteFailed ? '❗' : '✅'} The quest has ${voteFailed ? 'Failed!' : 'Succeeded'}`,
+                `${failedVotes} player${failedVotes !== 1 ? 's' : ''} failed the quest`,
                 renderQuestHistory(ctx.session.game.questHistory),
             ),
+            { parse_mode: 'HTML' },
         );
 
         if (ctx.session.game.evilScore === 3) {
