@@ -17,12 +17,12 @@ export const buildStartGameMessage = (joinedPlayers: Player[], hostId: number) =
     return messageBuilder(...commonLines);
 };
 
-export const getGlobalVoteText = (have: number, need: number, questN?: number) => {
+export const getGlobalVoteText = (have: number, need: number, oneMoreFailRequired?: boolean) => {
     return messageBuilder(
         `Leader must select ${need} players for this Quest`,
         `Currently selected ${have} out of ${need}`,
         '',
-        questN === 4 ? '* 2 ❌ required for this quest to fail' : '',
+        oneMoreFailRequired ? '* 2 ❌ required for this quest to fail' : '',
     );
 };
 

@@ -17,11 +17,12 @@ nominateMenu.dynamic((ctx, range) => {
                         : playerRef;
                 },
                 async (ctx, next) => {
-                    const { nominatedPlayers, currentLeader, partySize, currentQuest } = ctx.session.game;
+                    const { nominatedPlayers, currentLeader, partySize, currentQuest, allPlayers } = ctx.session.game;
                     if (currentLeader?.telegramId !== ctx.from.id) {
                         await ctx.answerCallbackQuery(`Only current leader can nominate players`);
                         return;
                     }
+                    const oneMoreFailRequired = allPlayers.length >= 7 && currentQuest === 4;
 
                     if (nominatedPlayers.some((pl) => pl.telegramId === player.telegramId)) {
                         ctx.session.game.nominatedPlayers = nominatedPlayers.filter(
@@ -30,7 +31,7 @@ nominateMenu.dynamic((ctx, range) => {
                         const msgText = getGlobalVoteText(
                             ctx.session.game.nominatedPlayers.length,
                             partySize,
-                            currentQuest,
+                            oneMoreFailRequired,
                         );
                         await ctx.editMessageText(msgText);
                     } else if (nominatedPlayers.length === partySize) {
@@ -41,7 +42,7 @@ nominateMenu.dynamic((ctx, range) => {
                         const msgText = getGlobalVoteText(
                             ctx.session.game.nominatedPlayers.length,
                             partySize,
-                            currentQuest,
+                            oneMoreFailRequired,
                         );
                         await ctx.editMessageText(msgText);
                     }

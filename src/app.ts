@@ -193,8 +193,9 @@ bot.filter((ctx) => ctx.from?.id === ctx.session.game.currentLeader?.telegramId)
 bot.filter((ctx) => ctx.from?.id === ctx.session.game.currentLeader?.telegramId).command(
     'nominate',
     async (ctx, next) => {
-        const { partySize, nominatedPlayers } = ctx.session.game;
-        await ctx.reply(getGlobalVoteText(nominatedPlayers.length, partySize, ctx.session.game.currentQuest), {
+        const { partySize, nominatedPlayers, currentQuest, allPlayers } = ctx.session.game;
+        const oneMoreFailRequired = allPlayers.length >= 7 && currentQuest === 4;
+        await ctx.reply(getGlobalVoteText(nominatedPlayers.length, partySize, oneMoreFailRequired), {
             reply_markup: nominateMenu,
         });
 
